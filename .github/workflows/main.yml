@@ -11,7 +11,9 @@ jobs:
     name: My Job
     runs-on: ubuntu-latest
     steps:
-      - name: DO
+      - name: Checkout git repository 
+        uses: actions/checkout@v3
+      - name: Import IMDb tsv datasets into SQLite database and make release 
         run: |
           curl --version
           sqlite3 --version
