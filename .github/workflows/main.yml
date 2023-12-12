@@ -13,30 +13,144 @@ jobs:
     steps:
       - name: Checkout git repository 
         uses: actions/checkout@v3
-      - name: Import IMDb tsv datasets into SQLite database and make release 
+      - name: Import IMDb tsv datasets into SQLite database and make release  
         run: |
           curl --version
           sqlite3 --version
-          gunzip --version
+          gzip --version
+
+          {
+            echo "create table title_akas (
+              tconst text not null,
+              ordering integer not null,
+              title text not null,
+              region text,
+              language text,
+              types text,
+              attributes text,
+              isOriginalTitle integer
+            );"
+            echo ".mode ascii"
+            echo '.separator "\t" "\n"'
+            echo ".import --skip 1 ./title.akas.tsv title_akas"
+            echo "update title_akas set region = null where region = '\N';"
+            echo "update title_akas set language = null where language = '\N';"
+            echo "update title_akas set types = null where types = '\N';"
+            echo "update title_akas set attributes = null where attributes = '\N';"
+            echo "update title_akas set isOriginalTitle = null where isOriginalTitle = '\N';"
+            echo "select count(*) from title_akas;"
+          } > ./title.akas.init.sql
+
+          {
+            echo "create table title_basics (
+              tconst text primary key,
+              titleType text not null,
+              primaryTitle text not null,
+              originalTitle text not null,
+              isAdult integer not null,
+              startYear integer,
+              endYear integer,
+              runtimeMinutes integer,
+              genres text
+            );"
+            echo ".mode ascii"
+            echo '.separator "\t" "\n"'
+            echo ".import --skip 1 ./title.basics.tsv title_basics"
+            echo "update title_basics set startYear = null where startYear = '\N';"
+            echo "update title_basics set endYear = null where endYear = '\N';"
+            echo "update title_basics set runtimeMinutes = null where runtimeMinutes = '\N';"
+            echo "update title_basics set genres = null where genres = '\N';"
+            echo "select count(*) from title_basics;"
+          } > ./title.basics.init.sql
+
+          {
+            echo "create table title_crew (
+              tconst text primary key,
+              directors text,
+              writers text
+            );"
+            echo ".mode ascii"
+            echo '.separator "\t" "\n"'
+            echo ".import --skip 1 ./title.crew.tsv title_crew"
+            echo "update title_crew set directors = null where directors = '\N';"
+            echo "update title_crew set writers = null where writers = '\N';"
+            echo "select count(*) from title_crew;"
+          } > ./title.crew.init.sql
       
+          {
+            echo "create table title_episode (
+              tconst text primary key,
+              parentTconst text not null,
+              seasonNumber integer,
+              episodeNumber integer
+            );"
+            echo ".mode ascii"
+            echo '.separator "\t" "\n"'
+            echo ".import --skip 1 ./title.episode.tsv title_episode"
+            echo "update title_episode set seasonNumber = null where seasonNumber = '\N';"
+            echo "update title_episode set episodeNumber = null where episodeNumber = '\N';"
+            echo "select count(*) from title_episode;"
+          } > ./title.episode.init.sql
+
+          {
+            echo "create table title_principals (
+              tconst text not null,
+              ordering integer not null,
+              nconst text not null,
+              category text not null,
+              job text,
+              characters text,
+              primary key (tconst, nconst)
+            );"
+            echo ".mode ascii"
+            echo '.separator "\t" "\n"'
+            echo ".import --skip 1 ./title.principals.tsv title_principals"
+            echo "update title_principals set job = null where job = '\N';"
+            echo "update title_principals set characters = null where characters = '\N';"
+            echo "select count(*) from title_principals;"
+          } > ./title.principals.init.sql
+
           {
             echo "create table title_ratings (
               tconst text primary key,
               averageRating real not null,
               numVotes integer not null
             );"
-            echo ".mode tabs"
-            echo ".import ./title.ratings.tsv title_ratings"
+            echo ".mode ascii"
+            echo '.separator "\t" "\n"'
+            echo ".import --skip 1 ./title.ratings.tsv title_ratings"
             echo "select count(*) from title_ratings;"
           } > ./title.ratings.init.sql
 
-          for d in title.ratings
+          {
+            echo "create table name_basics (
+              nconst text primary key,
+              primaryName text not null,
+              birthYear integer,
+              deathYear integer,
+              primaryProfession text,
+              knownForTitles text
+            );"
+            echo ".mode ascii"
+            echo '.separator "\t" "\n"'
+            echo ".import --skip 1 ./name.basics.tsv name_basics"
+            echo "update name_basics set birthYear = null where birthYear = '\N';"
+            echo "update name_basics set deathYear = null where deathYear = '\N';"
+            echo "update name_basics set primaryProfession = null where primaryProfession = '\N';"
+            echo "update name_basics set knownForTitles = null where knownForTitles = '\N';"
+            echo "select count(*) from name_basics;"
+          } > ./name.basics.init.sql
+
+
+          for d in title.akas title.basics title.crew title.episode title.principals title.ratings name.basics
           do
-            time curl -s "https://datasets.imdbws.com/$d.tsv.gz" | gunzip > "./$d.tsv";
+            time curl -s "https://datasets.imdbws.com/$d.tsv.gz" | gzip -d > "./$d.tsv";
             wc -l "./$d.tsv";
             cat "$d.init.sql" | sqlite3 ./imdb.sqlite3
           done
-          gh release upload latest ./imdb.sqlite3
+          echo "vacuum main into './imdb-vacuumed.sqlite3';" | sqlite3 ./imdb.sqlite3
+          gzip --best ./imdb-vacuumed.sqlite3
+          gh release upload latest ./imdb-vacuumed.sqlite3.gz
         env:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         shell: bash
