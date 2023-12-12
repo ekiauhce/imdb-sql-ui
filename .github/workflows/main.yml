@@ -2,6 +2,10 @@ on:
   # schedule:
   # - cron: "0 2 * * 1-5"
   workflow_dispatch:
+
+permissions:
+  contents: write
+
 jobs:
   my-job:
     name: My Job
@@ -21,13 +25,16 @@ jobs:
             );"
             echo ".mode tabs"
             echo ".import ./title.ratings.tsv title_ratings"
-            echo "select count(*) as title_ratings_count from title_ratings;"
+            echo "select count(*) from title_ratings;"
           } > ./title.ratings.init.sql
 
           for d in title.ratings
           do
             time curl -s "https://datasets.imdbws.com/$d.tsv.gz" | gunzip > "./$d.tsv";
             wc -l "./$d.tsv";
-            cat "$d.init.sql" | sqlite3 ./imdb.db
+            cat "$d.init.sql" | sqlite3 ./imdb.sqlite3
           done
+          gh release upload test ./imdb.sqlite3
+        env:
+          GITHUB_TOKEN: ${{ github.TOKEN }}
         shell: bash
