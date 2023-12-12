@@ -27,7 +27,7 @@ jobs:
           for d in title.ratings
           do
             time curl -s "https://datasets.imdbws.com/$d.tsv.gz" | gunzip > "./$d.tsv";
-            wc -l "./$d";
+            wc -l "./$d.tsv";
             cat "$d.init.sql" | sqlite3 ./imdb.db
           done
         shell: bash
