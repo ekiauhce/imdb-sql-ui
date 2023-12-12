@@ -7,11 +7,9 @@ jobs:
     name: My Job
     runs-on: ubuntu-latest
     steps:
-      - name: Print a greeting
-        env:
-          MY_VAR: Hi there! My name is
-          FIRST_NAME: Mona
-          MIDDLE_NAME: The
-          LAST_NAME: Octocat
+      - name: Check curl version
         run: |
-          echo $MY_VAR $FIRST_NAME $MIDDLE_NAME $LAST_NAME.
+          curl --version
+      - name: Check sqlite3 version
+        run: |
+          sqlite3 --version
