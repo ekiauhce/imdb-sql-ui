@@ -36,7 +36,7 @@ jobs:
             wc -l "./$d.tsv";
             cat "$d.init.sql" | sqlite3 ./imdb.sqlite3
           done
-          gh release upload test ./imdb.sqlite3
+          gh release upload latest ./imdb.sqlite3
         env:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         shell: bash
