@@ -7,9 +7,27 @@ jobs:
     name: My Job
     runs-on: ubuntu-latest
     steps:
-      - name: Check curl version
+      - name: DO
         run: |
           curl --version
-      - name: Check sqlite3 version
-        run: |
           sqlite3 --version
+          gunzip --version
+      
+          {
+            echo "create table title_ratings (
+              tconst text primary key,
+              averageRating real not null,
+              numVotes integer not null
+            );"
+            echo ".mode tabs"
+            echo ".import ./title.ratings.tsv title_ratings"
+            echo "select count(*) as title_ratings_count from title_ratings;"
+          } > ./title.ratings.init.sql
+
+          for d in title.ratings
+          do
+            time curl -s "https://datasets.imdbws.com/$d.tsv.gz" | gunzip > "./$d.tsv";
+            wc -l "./$d";
+            cat "$d.init.sql" | sqlite3 ./imdb.db
+          done
+        shell: bash
